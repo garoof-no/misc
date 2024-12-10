@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>longcat-defrag</title>
+    </head>
+    <body>
+      <h1>mlep</h1>
+      <p>Input like in <a href="https://adventofcode.com/2024/day/9">Advent of Code 2024, day 9</a>: <input type="text" id="input" value="9231167341150932468721349211938742118982034"> <button id="go">go</button>
+      </p>
+      <canvas id="canvas"></canvas>
+      <script>
+const canvas = document.querySelector("#canvas");
+const input = document.querySelector("#input");
+const go = document.querySelector("#go");
+
+const cat = (size, pos, catty, prev) => {
+  const next = prev && prev.next;
+  const res = { size: size, pos: pos, catty: size > 0 ? catty : false, prev: prev, next: next };
+  if (prev) { prev.next = res; }
+  if (next) { next.prev = res; }
+  return res;
+};
+
+let timer = null;
+
+const movecat = (candidate, ct) => {
+  if (!ct.catty) {
+    return null;
+  }
+  while (candidate !== ct) {
+    if (!candidate.catty && candidate.size >= ct.size) {
+      candidate.size -= ct.size;
+      const res = cat(ct.size, candidate.pos, ct.catty, candidate.prev);
+      candidate.pos += ct.size;
+      ct.catty = null;
+      return res;
+    }
+    candidate = candidate.next;
+  }
+  return null;
+};
+
+const vec = (x, y) => ({ x: x, y: y });
+const N = vec(0, -1);
+const E = vec(1, 0);
+const S = vec(0, 1);
+const W = vec(-1, 0);
+const add = (a, b) => vec(a.x + b.x, a.y + b.y);
+const scale = (v, s) => vec(v.x * s, v.y * s);
+
+const color = () => `#${(Math.random()*0xFFFFFF<<0).toString(16)}`;
+
+go.onclick = () => {
+  if (timer !== null) {
+    clearTimeout(timer);
+  }
+  const first = cat(0, 0);
+  let prev = first;
+  let catty = true;
+  let size = 0;
+  for (const c of input.value) {
+    const n = parseInt(c);
+    if (!isNaN(n)) {
+      prev = cat(n, size, catty && color(), prev);
+      size += n;
+      catty = !catty;
+    }
+  }
+  const width = Math.min(16, Math.ceil((window.innerWidth - 32) / 32));
+  const diskRect = vec(width, Math.ceil(size / width));
+  const winRect = scale(diskRect, 32);
+
+  const xy = (pos) => vec(pos % width, (pos / width) >>> 0);
+
+  canvas.width = winRect.x;
+  canvas.height = winRect.y;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  const drawcat = (p, cat, state) => {
+    const rect = (x, y, w, h) => {
+      const dx = p.x + x * 4;
+      const dy = p.y + y * 4;
+      ctx.fillRect(dx, dy, w * 4, h * 4);
+    }
+    const draw = () => {
+      ctx.fillStyle = cat.catty;
+      const w = cat.size * 8; 
+      // tail
+      rect(1, 2, 1, 2);
+      rect(2, 1, 1, 1);
+      // leg
+      if (state === 1) {
+        rect(0, 6, 1, 1);
+      } else {
+        rect(1, 7, 1, 1);
+      }
+      // long
+      rect(1, 4, w - 2, 3);
+      // leg
+      if (state === 2) {
+        rect(w - 1, 6, 1, 1);
+      } else {
+        rect(w - 2, 7, 1, 1);
+      }
+      // ears
+      rect(w - 4, 0, 1, 1)
+      rect(w - 1, 0, 1, 1)
+      // head
+      rect(w - 4, 1, 4, 1)
+      rect(w - 4, 2, 1, 1)
+      rect(w - 2, 2, 1, 1)
+      rect(w - 4, 3, 4, 1)
+    };
+    while (true) {
+      draw();
+      const catw = cat.size * 32;
+      const overflow = p.x + catw - winRect.x;
+      if (overflow > 0) {
+        p = vec(overflow - catw, p.y + 32);
+      } else {
+        return;
+      }
+    }
+  };
+
+  const drawcats = (skip) => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let cat = first;
+    while (cat) {
+      if (cat.catty && cat !== skip) {
+        drawcat(scale(xy(cat.pos), 32), cat, 0);
+      }
+      cat = cat.next;
+    }
+  };
+
+  const dir = (f, t) => {
+    const xd = f.x < t.x ? E : W;
+    const yd = f.y < t.y ? S : N;
+    const x = Math.abs(f.x - t.x);
+    const y = Math.abs(f.y - t.y);
+    return Math.random() < (x / (x + y)) ? xd : yd;
+  };
+
+  const anim = (f, t, cat, frame, next) => {
+    if (f.x === t.x && f.y == t.y) {
+      timer = setTimeout(next);
+      return;
+    }
+    f = add(f, dir(f, t));
+    
+    drawcats(cat);
+    drawcat(f, cat, frame < 10 ? 1 : 2);
+    timer = setTimeout(() => anim(f, t, cat, frame == 20 ? 0 : frame + 1, next));
+  };
+
+  const defrag = (first, ct) => {
+    if (ct === first) {
+      return;
+    }
+    const prev = ct.prev;
+    const next = () => defrag(first, prev);
+    const res = movecat(first, ct);
+    if (res) {
+      const f = scale(xy(ct.pos), 32);
+      const t = scale(xy(res.pos), 32);
+      anim(f, t, res, 0, next);
+    } else {
+      timer = setTimeout(next);
+    }
+  };
+  
+  defrag(first, prev);
+};
+
+
+      </script>
+    </body>
+</html>
