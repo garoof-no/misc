@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Advent of sokoboko</title>
+  <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAAAXNSR0IArs4c6QAAAGFJREFUGJWNkFEKwCAMQx+yUwj7Ejxcvz3Gvr2g4DWyHztkc2yB0pCEBkpOCUBjryAAFTMB2mO8nMEFKLhYzGi9y43Wu4oZANt818U7wlL9Ch21PvgjNFc6/1WH/+ltckqcRpYkzQ6QhCcAAAAASUVORK5CYII=" sizes="any" type="image/png">
+  <style>
+body { background-color: #D3D3D3; max-width: 50rem; margin: 1rem auto 0 auto; }
+textarea { min-width: 40rem; min-height: 20rem }
+.key { width: 48px; height: 48px; }
+.moves { white-space: pre-wrap; word-break: break-all; }
+  </style>
+  <script>
+const vecs = new Map();
+const vec = (x, y) => {
+  const key = `${x},${y}`;
+  if (!vecs.has(key)) {
+    vecs.set(key, { x: x, y: y });
+  }
+  return vecs.get(key);
+};
+const add = (a, b) => vec(a.x + b.x, a.y + b.y);
+const sub = (a, b) => vec(a.x - b.x, a.y - b.y);
+const neg = (v) => vec(-v.x, -v.y);
+
+const spriteSize = vec(16, 16);
+const tileSize = vec(32, 32);
+
+const elem = (tagName, props, ...children) => {
+  const el = Object.assign(document.createElement(tagName), props);
+  el.replaceChildren(...children);
+  return el;
+};
+
+const trimmed = (str) => str.match(/^(\s*\n)?([\s\S]*?)\s*$/)[2];
+
+const read1 = str => {
+  const rows = [];
+  for (const rowstr of trimmed(str).split("\n")) {
+    const row = [];
+    rows.push(row);
+    for (const c of rowstr.trimEnd()) {
+      row.push(c);
+    }
+  }
+  const size = vec(Math.max(...rows.map(row => row.length)), rows.length);
+  for (const row of rows) {
+    while (row.length < size.x) {
+      row.push(".");
+    }
+  }
+  return { rows: rows, size: size };
+};
+
+const read2 = str => {
+  const rows = [];
+  let playerfound = false;
+  for (const rowstr of trimmed(str).split("\n")) {
+    const row = [];
+    rows.push(row);
+    for (const c of rowstr.trimEnd()) {
+      if (c === "O") {
+        row.push("[");
+        row.push("]");
+      } else if (c === "@") {
+        row.push("@");
+        row.push(".");
+      } else {
+        row.push(c);
+        row.push(c);
+      }
+    }
+  }
+  const size = vec(Math.max(...rows.map(row => row.length)), rows.length);
+  for (const row of rows) {
+    while (row.length < size.x) {
+      row.push(".");
+    }
+  }
+  return { rows: rows, size: size };
+};
+
+const restart = (game) => {
+  const level = game.read(game.initial);
+  game.level = level;
+  game.moves = "";
+  game.touched = new Set(allPositions(level.size));
+};
+
+const newGame = (str, read) => {
+  const game = { initial: str, read: read };
+  restart(game);
+  return game;
+};
+
+const at = (game, pos, notfound = "#") => {
+  const level = game.level;
+  if (
+    pos.y < 0 || pos.y >= level.size.y
+    || pos.x < 0 || pos.x >= level.size.x
+  ) {
+    return notfound;
+  }
+  return level.rows[pos.y][pos.x];
+};
+
+const put = (game, pos, tile) => {
+  game.level.rows[pos.y][pos.x] = tile;
+  game.touched.add(pos);
+};
+
+const playerPos = (game) => {
+  const level = game.level;
+  for (let y = 0; y < level.size.y; y++) {
+    const row = level.rows[y];
+    for (let x = 0; x < level.size.x; x++) {
+      const tile = row[x];
+      if (tile === "@" || tile === "+") {
+        return vec(x, y);
+      }
+    }
+  }
+  throw "no player in level? :(";
+};
+
+const step = (game, pos, dir) => {
+  const nextPos = add(pos, dir);
+  const nextTile = at(game, nextPos);
+  put(game, nextPos, at(game, pos));
+  put(game, pos, ".");
+};
+
+const dirs = [
+  { name: "^", vec: vec(0, -1) },
+  { name: "<", vec: vec(-1, 0) },
+  { name: "v", vec: vec(0, 1) },
+  { name: ">", vec: vec(1, 0) }
+];
+const dirNum = (str) => {
+  const s = str.toLowerCase();
+  return s === "^" ? 0 : s === "<" ? 1 : s === "v" ? 2 : s === ">" ? 3 : null;
+};
+
+const pop = (st) => {
+  for (const v of st) {
+    st.delete(v);
+    return v;
+  }
+};
+
+const movable = new Set(["@", "O", "[", "]"]);
+
+const stepsFor = (game, player, dir) => {
+  const res = [];
+  const seen = new Set();
+  const ps = new Set([player]);
+  while (ps.size > 0) {
+    const p = pop(ps);
+    const pd = add(p, dir);
+    if (seen.has(p)) {
+      continue;
+    }
+    seen.add(p);
+    const c = at(game, p);
+    if (c === "#") {
+      return new Set();
+    } else if (c === ".") {
+    } else if (movable.has(c)) {
+      res.push(p);
+      if (dir.x === 0) {
+        if (c === "[") {
+          ps.add(vec(p.x + 1, p.y));
+        } else if (c === "]") {
+          ps.add(vec(p.x - 1, p.y));
+        }
+      }
+      ps.add(pd);
+    }
+  }
+  return res;
+};
+
+const move = (game, letter) => {
+  const dirid = dirNum(letter);
+  if (dirid === null) {
+    return;
+  }
+  const dir = dirs[dirid].vec;
+  const pos = playerPos(game);
+  const steps = stepsFor(game, pos, dir);
+  for (let i = steps.length - 1; i >= 0; i--) {
+    step(game, steps[i], dir);
+  }
+  game.moves += letter;
+};
+
+const score = (game) => {
+  let sum = 0;
+  game.level.rows.forEach((row, y) =>
+    row.forEach((t, x) => {
+      if (t === "[" || t === "O") {
+        sum += 100 * y + x;
+      }
+    }));
+  return sum;
+};
+
+function* allPositions(size) {
+  for (let y = 0; y < size.y; y++) {
+    for (let x = 0; x < size.x; x++) {
+      yield(vec(x, y));
+    }
+  }
+};
+
+const drawer = (ctx, sprites) => {
+  const map = new Map(
+    [
+      [".", vec(0, 0)],
+      ["[", vec(0, 1)], ["]", vec(1, 1)],
+      ["@", vec(0, 2)], ["+", vec(1, 2)],
+      ["#", vec(0, 3)], ["O", vec(1, 3)]]);
+  
+  const { x: tw, y: th } = tileSize;
+  const { x: sw, y: sh } = spriteSize;
+  return (game) => {
+    for (const p of game.touched) {
+      const spr = map.get(at(game, p));
+      ctx.drawImage(
+        sprites,
+        spr.x * sw, spr.y * sh, sw, sh,
+        p.x * tw, p.y * th, tw, th);
+    }
+  };
+};
+
+const play = (sprites, read, levelstr, movesstr) => {
+  const game = newGame(levelstr, read);
+  for (const c of movesstr) {
+    move(game, c);
+  }
+
+  const gameEl = document.querySelector("#game");
+  gameEl.replaceChildren();
+  const scoreEl = gameEl.appendChild(elem("p"));
+  const canvas = gameEl.appendChild(elem("canvas"));;
+  const ctx = canvas.getContext("2d");;
+  canvas.width = game.level.size.x * tileSize.x;
+  canvas.height = game.level.size.y * tileSize.y;
+  ctx.imageSmoothingEnabled = false;
+  const draw = drawer(ctx, sprites);
+
+  const refresh = () => {
+    draw(game);
+    movesEl.innerText = game.moves;
+    scoreEl.innerText = `GSP score: ${score(game)}`;
+  };
+
+  const controlsEl = gameEl.appendChild(elem("table"));
+  const movesEl = gameEl.appendChild(elem("pre", { className: "moves" }));
+  
+
+  const perform = (() => {
+    const commands = new Map([
+      ["w", () => move(game, "^")],
+      ["a", () => move(game, "<")],
+      ["s", () => move(game, "v")],
+      ["d", () => move(game, ">")],
+      ["r", () => restart(game)],
+    ]);
+    return c => {
+      if (commands.has(c)) {
+        commands.get(c)();
+        refresh();
+      }
+    };
+    
+  })();
+
+  (() => {
+    const layout = `
+ w r
+asd
+`.split("\n").map((x) => x.split(""));
+    layout.pop();
+    layout.shift();
+    const descriptions =
+      {
+        w: "Up", a: "Left", s: "Down", d: "Right", r: "Restart"
+      };
+    for (const row of layout) {
+      const tr = controlsEl.appendChild(elem("tr"));
+      for (const c of row) {
+        const td = tr.appendChild(elem("td"));
+        if (c !== " ") {
+          td.appendChild(elem(
+            "button",
+            { className: "key", title: descriptions[c], onclick: () => perform(c) },
+            c.toUpperCase()
+          ));
+        }
+      }
+    }
+  })();
+  
+  document.onkeypress = event => perform(event.key.toLowerCase());
+  refresh();
+};
+
+window.onload = () => {
+  const sprites = document.querySelector("#sprites");
+  sprites.remove()
+  const inputEl = document.querySelector("#input");
+  const load1El = document.querySelector("#load1");
+  const load2El = document.querySelector("#load2");
+  const go = (read) => () => {
+    const [level, moves] = input.value.split("\n\n");
+    play(sprites, read, level, moves || "");
+  };
+  load1El.onclick = go(read1);
+  load2El.onclick = go(read2);
+};
+  </script>
+</head>
+<body>
+  <h1>Advent of Sokoboko</h1>
+  <p>Input like in <a href="https://adventofcode.com/2024/day/15">Advent of Code 2024, day 15</a>:<p>
+  <textarea id="input">##########
+#........#
+#...O....#
+#..O@O...#
+#...O.#..#
+#........#
+##########
+
+^&lt;vv&gt;</textarea>
+  <div><button id="load1">Load part 1</button><button id="load2">Load part 2</button></div>
+  <div id="game"></div>
+  <img id="sprites" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAABACAYAAAB7jnWuAAAAAXNSR0IArs4c6QAAAllJREFUaIHtmL1Ow0AMx50qb1CJiZWt16Ere6aKB8navgIbWStWBlYmpk48A5dH6FSpr9Cy4Oji2D4nuSpL/hIi5D7889k+7pJ5728woRZTGp8BZoAZYAaYAQAA8hSTOOcGjfPepwHw3g8eO3kIZoDeObA7rqJ9qqJOB0ANbtfXTp/v30WrjY7RgEQAnAQnRSMWUUiciwPJ6JmQGqai3lrbwvYQRFwB6jFOyq2I1GZZvWYF7uF57H1V1N0ViMWaa7ca5tQBsAySFPPYBHAPwxqQWAWStCS0GjZVwT3KkFNWVLcbpQKQq4IzMqT+GwBahjH1CQFK24o7ORBT6n9GvQFSa/LzgAqgHTaHHkTNAM452Jcla8hq3OJANAQIEf7sy9Jk3OKAaSu2GNTGUoh9WcLb4dAGwE5jzvgahKQFGo95icT0GYXh6StzGYaAFHaMAx2AoZ7EJDmQS50A+KVGSbnSF16tAmlZJbAhDiQ5EUmyOJAMQPOWk3NO/j7ATaZl+Zi9I8cJwuThJoy1D9Xk54Hs9QlGAbx8jVuNHADg8WEpdjidL2q7JOsVPXkZctf67foqXtGTHsl2x5V4NN+ury0QVLIcoMbRc/qMf+NK5DS+sZhr7eEFZbu+NobDZ3pnSBIC9D40hiD0mYYiWRJSz7ivJFx+5KfzpfOSeye1b/5/axdSmg8tAID77AOScQqSJARVUbPfEzXjTRWkAAiNorQyDJUD9Is51edxBVVRN6vAXdWlPQAAIPt4XrY2or77wOb9h72ycyEA6G7FyXKACqG0ryPJAKxQnP4AVjOisgx1J9kAAAAASUVORK5CYII=" alt="">
+</body>
+</html>
