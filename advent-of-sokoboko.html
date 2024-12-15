@@ -235,11 +235,8 @@ const drawer = (ctx, sprites) => {
   };
 };
 
-const play = (sprites, read, levelstr, movesstr) => {
+const play = (sprites, delay, read, levelstr, movesstr) => {
   const game = newGame(levelstr, read);
-  for (const c of movesstr) {
-    move(game, c);
-  }
 
   const gameEl = document.querySelector("#game");
   gameEl.replaceChildren();
@@ -260,7 +257,7 @@ const play = (sprites, read, levelstr, movesstr) => {
   const controlsEl = gameEl.appendChild(elem("table"));
   const movesEl = gameEl.appendChild(elem("pre", { className: "moves" }));
   
-
+  let ready = false;
   const perform = (() => {
     const commands = new Map([
       ["w", () => move(game, "^")],
@@ -270,7 +267,7 @@ const play = (sprites, read, levelstr, movesstr) => {
       ["r", () => restart(game)],
     ]);
     return c => {
-      if (commands.has(c)) {
+      if (ready && commands.has(c)) {
         commands.get(c)();
         refresh();
       }
@@ -305,18 +302,43 @@ asd
   })();
   
   document.onkeypress = event => perform(event.key.toLowerCase());
+
   refresh();
+
+  let i = 0;
+  const step = () => {
+    if (i >= movesstr.length) {
+      refresh();
+      ready = true;
+      return;
+    }
+    move(game, movesstr[i]);
+    refresh();
+    i++;
+    setTimeout(step, delay);
+  };
+  if (delay > 0) {
+    step();
+  } else {
+    for (const c of movesstr) {
+      move(game, c);
+    }
+    refresh();
+    ready = true;
+  }
 };
 
 window.onload = () => {
   const sprites = document.querySelector("#sprites");
   sprites.remove()
   const inputEl = document.querySelector("#input");
+  const delayEl = document.querySelector("#delay");
   const load1El = document.querySelector("#load1");
   const load2El = document.querySelector("#load2");
   const go = (read) => () => {
     const [level, moves] = input.value.split("\n\n");
-    play(sprites, read, level, moves || "");
+    const delay = parseInt(delayEl.value);
+    play(sprites, isNaN(delay) ? 0 : delay, read, level, moves || "");
   };
   load1El.onclick = go(read1);
   load2El.onclick = go(read2);
@@ -335,7 +357,7 @@ window.onload = () => {
 ##########
 
 ^&lt;vv&gt;</textarea>
-  <div><button id="load1">Load part 1</button><button id="load2">Load part 2</button></div>
+  <div>Delay: <input id="delay" value="100">. <button id="load1">Load part 1</button><button id="load2">Load part 2</button></div>
   <div id="game"></div>
   <img id="sprites" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAABACAYAAAB7jnWuAAAAAXNSR0IArs4c6QAAAllJREFUaIHtmL1Ow0AMx50qb1CJiZWt16Ere6aKB8navgIbWStWBlYmpk48A5dH6FSpr9Cy4Oji2D4nuSpL/hIi5D7889k+7pJ5728woRZTGp8BZoAZYAaYAQAA8hSTOOcGjfPepwHw3g8eO3kIZoDeObA7rqJ9qqJOB0ANbtfXTp/v30WrjY7RgEQAnAQnRSMWUUiciwPJ6JmQGqai3lrbwvYQRFwB6jFOyq2I1GZZvWYF7uF57H1V1N0ViMWaa7ca5tQBsAySFPPYBHAPwxqQWAWStCS0GjZVwT3KkFNWVLcbpQKQq4IzMqT+GwBahjH1CQFK24o7ORBT6n9GvQFSa/LzgAqgHTaHHkTNAM452Jcla8hq3OJANAQIEf7sy9Jk3OKAaSu2GNTGUoh9WcLb4dAGwE5jzvgahKQFGo95icT0GYXh6StzGYaAFHaMAx2AoZ7EJDmQS50A+KVGSbnSF16tAmlZJbAhDiQ5EUmyOJAMQPOWk3NO/j7ATaZl+Zi9I8cJwuThJoy1D9Xk54Hs9QlGAbx8jVuNHADg8WEpdjidL2q7JOsVPXkZctf67foqXtGTHsl2x5V4NN+ury0QVLIcoMbRc/qMf+NK5DS+sZhr7eEFZbu+NobDZ3pnSBIC9D40hiD0mYYiWRJSz7ivJFx+5KfzpfOSeye1b/5/axdSmg8tAID77AOScQqSJARVUbPfEzXjTRWkAAiNorQyDJUD9Is51edxBVVRN6vAXdWlPQAAIPt4XrY2or77wOb9h72ycyEA6G7FyXKACqG0ryPJAKxQnP4AVjOisgx1J9kAAAAASUVORK5CYII=" alt="">
 </body>
