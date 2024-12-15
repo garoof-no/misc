@@ -235,7 +235,10 @@ const drawer = (ctx, sprites) => {
   };
 };
 
+let timer = null;
+
 const play = (sprites, delay, read, levelstr, movesstr) => {
+  clearTimeout(timer)
   const game = newGame(levelstr, read);
 
   const gameEl = document.querySelector("#game");
@@ -315,7 +318,7 @@ asd
     move(game, movesstr[i]);
     refresh();
     i++;
-    setTimeout(step, delay);
+    timer = setTimeout(step, delay);
   };
   if (delay > 0) {
     step();
