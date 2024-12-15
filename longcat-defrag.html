@@ -7,7 +7,7 @@
     </head>
     <body>
       <h1>mlep</h1>
-      <p>Input like in <a href="https://adventofcode.com/2024/day/9">Advent of Code 2024, day 9</a>: <input type="text" id="input" value="923116734115093123780450246872134921193874211898203423434698"> <button id="go">go</button>
+      <p>Input like in <a href="https://adventofcode.com/2024/day/9">Advent of Code 2024, day 9</a>: <input type="text" id="input" value="9231167341150931231231230341238472835472305487198345712328141208346123593487123780450246872134921193874211898203423434698"> <button id="go">go</button>
       </p>
       <canvas id="canvas"></canvas>
       <script>
@@ -16,8 +16,15 @@ const input = document.querySelector("#input");
 const go = document.querySelector("#go");
 
 const cat = (size, pos, catty, prev) => {
+  if (size === 0) {
+    return prev;
+  }
+  if (!catty && prev && !prev.catty) {
+    prev.size += size;
+    return prev;
+  }
   const next = prev && prev.next;
-  const res = { size: size, pos: pos, catty: size > 0 ? catty : false, prev: prev, next: next };
+  const res = { size: size, pos: pos, catty: catty, prev: prev, next: next };
   if (prev) { prev.next = res; }
   if (next) { next.prev = res; }
   return res;
@@ -56,7 +63,7 @@ go.onclick = () => {
   if (timer !== null) {
     clearTimeout(timer);
   }
-  const first = cat(0, 0);
+  const first = { size: 0, pos: 0 };
   let prev = first;
   let catty = true;
   let size = 0;
@@ -68,7 +75,7 @@ go.onclick = () => {
       catty = !catty;
     }
   }
-  const width = Math.min(16, Math.ceil((window.innerWidth - 32) / 32));
+  const width = Math.max(20, Math.min(Math.ceil(Math.sqrt(size)), Math.ceil((window.innerWidth - 32) / 32)));
   const diskRect = vec(width, Math.ceil(size / width));
   const winRect = scale(diskRect, 32);
 
