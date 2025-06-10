@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Life</title>
+    <meta name="description" content="Mlep">
+    <meta charset="utf-8">
+    <style>
+@media all {html {font-size: 20px;}}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: sans-serif;
+  margin: 2rem;
+}
+
+h1 {
+  font-weight: bold;
+  font-size: 1.5rem;
+  color: pink;
+}
+
+p {
+  max-width: 40rem;
+}
+
+.canvas {
+  border: 0.1rem solid grey;
+  margin-bottom: 1rem;
+}
+
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Liff</h1>
+    </header>
+
+    <main>
+      <canvas class="canvas" id="canvas"></canvas>
+    </main>
+
+    <script>
+
+const vec = (x, y) => ({x: x, y: y});
+
+const squareSize = vec(32, 32);
+const gameSize = vec(20, 20);
+
+const allCells = [...Array(gameSize.y).keys()].flatMap(y => [...Array(gameSize.y).keys()].map(x => vec(x, y)));
+
+const canvas = document.getElementById("canvas");
+canvas.width = squareSize.x * gameSize.x;
+canvas.height = squareSize.y * gameSize.y;
+
+const ctx = canvas.getContext("2d");
+
+const clear = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+const drawSquare = position => ctx.fillRect(position.x * squareSize.x, position.y * squareSize.y, squareSize.x, squareSize.y);
+
+const vecString = p => "vec(" + p.x + ", " + p.y + ")";
+
+const S = {
+  with: positions => new Set(positions.map(vecString)),
+  member: (position, set) => set.has(vecString(position))
+};
+
+const inBounds = position => position.x >= 0 && position.x < gameSize.x && position.y >= 0 && position.y < gameSize.y;
+
+const isAlive = (position, living) => inBounds(position) && S.member(position, living);
+
+const neighbours = (position, living) => {
+  const x = position.x;
+  const y = position.y;
+  const positions = [
+    vec(x - 1, y - 1), vec(x, y - 1), vec(x + 1, y - 1),
+    vec(x - 1, y), vec(x + 1, y),
+    vec(x - 1, y + 1), vec(x, y + 1), vec(x + 1, y + 1)
+    ];
+  
+  return positions.filter(p => S.member(p, living)).length;
+}
+
+const shouldLive = living => position => {
+  const n = neighbours(position, living);
+  return (isAlive(position, living) && n === 2) || n === 3;
+}
+
+const step = living => S.with(allCells.filter(shouldLive(living))); 
+
+const parse = s => {
+  const lines = s.split(/\r\n|\r|\n/);
+  return S.with(allCells.filter(p => {
+    if (p.y >= lines.length) {
+      return false;
+    }
+    const line = lines[p.y];
+    if (p.x >= line.length) {
+      return false;
+    }
+    return line.charAt(p.x) === "*";
+  }));
+};
+
+const update = state => () => {
+  clear();
+  allCells.forEach(p => {
+    if (S.member(p, state)) {
+      drawSquare(vec(p.x, p.y));
+    }
+  });
+  setTimeout(update(step(state)), 250);
+}
+
+const start = parse(
+`
+
+
+
+
+
+
+
+       *    *
+     ** **** **
+       *    *
+`);
+
+update(start)();
+    </script>
+
+  </body>
+</html>
+

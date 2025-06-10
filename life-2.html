@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Life</title>
+    <meta name="description" content="Mlep">
+    <meta charset="utf-8">
+    <style>
+@media all {html {font-size: 20px;}}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: sans-serif;
+  margin: 2rem;
+}
+
+h1 {
+  font-weight: bold;
+  font-size: 1.5rem;
+  color: pink;
+}
+
+p {
+  max-width: 40rem;
+}
+
+.canvas {
+  border: 0.1rem solid grey;
+}
+
+
+
+.button {
+  float: left;
+}
+
+table {
+  clear: both;
+  float: left;
+}
+
+td {
+  vertical-align: top;
+}
+
+.dead {
+  color: lightgrey;
+}
+
+.alive {
+  color: black;
+}
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Liff</h1>
+    </header>
+
+    <main>
+      <button class="button" id="stepPrevious">Previous</button>
+      <button class="button" id="stepNext">Next</button>
+      <table>
+      <tr>
+        <td><canvas class="canvas" id="current"></canvas></td>
+        <td id="currentText"></td>
+      </tr>
+      <tr>
+        <td><canvas class="canvas" id="next"></canvas></td>
+        <td id="nextText"></td>
+      </tr>
+      </table>
+      
+      
+    </main>
+
+    <script>
+
+const vec = (x, y) => ({x: x, y: y});
+
+const squareSize = vec(16, 16);
+const gameSize = vec(20, 20);
+
+const allCells = [...Array(gameSize.y).keys()].flatMap(y => [...Array(gameSize.x).keys()].map(x => vec(x, y)));
+
+const setupDisplay = (canvasId, textId) => {
+  const canvas = document.getElementById(canvasId);
+  canvas.width = squareSize.x * gameSize.x;
+  canvas.height = squareSize.y * gameSize.y;
+  const context = canvas.getContext("2d");
+  return { canvas: canvas, context: context, text: document.getElementById(textId) };
+}
+
+const current = setupDisplay("current", "currentText");
+const next = setupDisplay("next", "nextText");
+
+const clear = x => x.context.clearRect(0, 0, x.canvas.width, x.canvas.height);
+
+const drawSquare = x => position => x.context.fillRect(position.x * squareSize.x, position.y * squareSize.y, squareSize.x, squareSize.y);
+
+const drawNum = (x, pos, n, color) => {
+  x.context.fillStyle = color;
+  x.context.font = "12px sans-serif";
+  x.context.fillText("" + n, (pos.x * squareSize.x) + 5, (pos.y * squareSize.y) + squareSize.y - 3);
+};
+
+const vecString = p => "(" + p.x + ", " + p.y + ")";
+
+const inBounds = position => position.x >= 0 && position.x < gameSize.x && position.y >= 0 && position.y < gameSize.y;
+
+const neighbours = position => {
+  const x = position.x;
+  const y = position.y;
+  const positions = [
+    vec(x - 1, y - 1), vec(x, y - 1), vec(x + 1, y - 1),
+    vec(x - 1, y), vec(x + 1, y),
+    vec(x - 1, y + 1), vec(x, y + 1), vec(x + 1, y + 1)
+    ];
+  return positions.filter(inBounds);
+}
+
+const isAlive = cells => {
+  const living  = new Set(cells.map(vecString));
+  return position => living.has(vecString(position));
+};
+
+const shouldLive = alive => {
+  return position => {
+    const n = neighbours(position).filter(alive).length;
+    return (alive(position) && n === 2) || n === 3;
+  };
+}
+
+const step = alive => isAlive(allCells.filter(shouldLive(alive))); 
+
+const parse = s => {
+  const lines = s.split(/\r\n|\r|\n/);
+  const cells = allCells.filter(p => {
+    if (p.y >= lines.length) {
+      return false;
+    }
+    const line = lines[p.y];
+    if (p.x >= line.length) {
+      return false;
+    }
+    return line.charAt(p.x) === "*";
+  });
+  return isAlive(cells);
+};
+
+const drawLife = (x, alive) => {
+  const draw = drawSquare(x);
+  clear(x);
+  allCells.filter(alive).forEach(draw);
+}
+
+const currentHtml = (alive, position) => {
+  const res = [];
+  const sel = document.createElement("span");
+  sel.innerText = "Selected: " + vecString(position);
+  res.push(sel);
+  res.push(document.createElement("br"));
+  const neigh = document.createElement("span");
+  neigh.innerText = "Neighbours:";
+  res.push(neigh);
+  const neighs = neighbours(position);
+  for (var i = 0; i < neighs.length; i++) {
+    const p = neighs[i];
+    res.push(document.createElement("br"));
+    const sp1 = document.createElement("span");
+    sp1.innerText = (i + 1) + ": ";
+    res.push(sp1);
+    const sp2 = document.createElement("span");
+    sp2.innerText = vecString(p);
+    sp2.classList.add(alive(p) ? "alive" : "dead");
+    res.push(sp2);
+  };
+  return res;
+}
+
+const nextHtml = (prevAlive, alive, position) => {
+  const res = [];
+  const sel = document.createElement("span");
+  sel.innerText = "Selected: " + vecString(position);
+  res.push(sel);
+  res.push(document.createElement("br"));
+
+  const neughCount = neighbours(position).filter(prevAlive).length;
+
+  const result1 = document.createElement("span");
+  var resultText = "The cell used to be " + (prevAlive(position) ? "alive" : "dead");
+  resultText += " and had " + neughCount + " living neighbours.";
+  result1.innerText =  resultText;
+  res.push(result1);
+  res.push(document.createElement("br"));
+  const result2 = document.createElement("span");
+  result2.innerText = "So now it is " + (alive(position) ? "alive" : "dead") + ".";
+  res.push(result2);
+  
+  return res;
+}
+
+const setHtml = (element, children) => {
+  while (element.firstChild) element.removeChild(element.firstChild);
+  children.forEach(c => element.appendChild(c));
+}
+
+const displayLives = alive => {
+  previousButton.disabled = history.length === 0;
+  current.context.fillStyle = "#000000";
+  drawLife(current, alive);
+  
+  const nextState = step(alive);
+  next.context.fillStyle = "#000000";
+  drawLife(next, nextState);
+  
+  if (selected !== false) {
+
+    current.context.fillStyle = "#FF000066";
+    drawSquare(current)(selected);
+    
+    const neighs = neighbours(selected);
+    for (var i = 0; i < neighs.length; i++) {
+      const p = neighs[i];
+      drawNum(current, p, i + 1, alive(p) ? "#FFFFFF" : "#000000");
+    };
+    
+    setHtml(current.text, currentHtml(alive, selected));
+    setHtml(next.text, nextHtml(alive, nextState, selected));
+    
+    next.context.fillStyle = "#FF000066";
+    drawSquare(next)(selected);
+  } else {
+    current.text.innerText = "No cell selected.";
+    next.text.innerText = "";
+  }
+}
+
+var currentState = parse(
+`
+
+
+
+
+
+
+
+       *    *
+     ** **** **
+       *    *
+`);
+
+var selected = false;
+
+const updateSelected = newSelected => {
+  const oldSelected = selected;
+  selected = newSelected;
+  if (newSelected === false) {
+    displayLives(currentState);
+    return;
+  }
+  if (oldSelected === false) {
+    displayLives(currentState);
+    return;
+  }
+  if ((oldSelected.x !== newSelected.x) || (oldSelected.y !== newSelected.y)) {
+    displayLives(currentState);
+    return;
+  }  
+}
+
+const updateMousePosition = canvas => evt => {
+  const rect = canvas.getBoundingClientRect();
+  const x = ~~((evt.clientX - rect.left) / squareSize.x);
+  const y = ~~((evt.clientY - rect.top) / squareSize.y);
+  updateSelected(vec(x, y));
+}
+
+const clearSelection = () => { updateSelected(false); };
+
+current.canvas.onmouseleave = clearSelection;
+current.canvas.onmousemove = updateMousePosition(current.canvas);
+
+next.canvas.onmouseleave = clearSelection;
+next.canvas.onmousemove = updateMousePosition(next.canvas);
+
+const history = [];
+
+const stepNext = () => {
+  history.push(currentState);
+  while (history.length > 100) {
+    history.shift();
+  }
+  currentState = step(currentState);
+  displayLives(currentState);
+}
+
+const stepPrevious = () => {
+  currentState = history.pop();
+  displayLives(currentState);
+}
+const previousButton = document.getElementById("stepPrevious");
+
+displayLives(currentState);
+
+previousButton.onclick = stepPrevious;
+document.getElementById("stepNext").onclick = stepNext;
+    </script>
+
+  </body>
+</html>
+

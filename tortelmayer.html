@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tortelmayer</title>
+    <meta name="description" content="A cool thing made with Glitch">
+    <link id="favicon" rel="icon" href="https://glitch.com/edit/favicon-app.ico" type="image/x-icon">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+@media all {html {font-size: 20px;}}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: helvetica, arial, sans-serif;
+  margin: 2rem;
+}
+
+h1 {
+  font-weight: bold;
+  font-size: 1.5rem;
+  color: pink;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+p {
+  max-width: 40rem;
+}
+
+button {
+  font-size: 0.8rem;
+  border-radius: 0.1rem;
+  background-color: lightgrey;
+  border: 0.1rem solid grey;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: yellow;
+}
+textarea {
+  font-size: 0.8rem;
+}
+
+footer {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 0.1rem solid lightgrey;
+}
+
+footer > a {
+  color: #BBBBBB;
+}
+
+td {
+  vertical-align: top;
+  text-align: left;
+} 
+
+.result {
+  font-size: 0.8rem;
+  overflow: auto;
+  height: 10rem;
+}
+
+.canvasContainer {
+  width: 60rem;
+  height: 15rem;
+  resize: both;
+  overflow: auto;
+  border: 0.1rem solid grey;
+  margin-bottom: 1rem;
+}
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Tortelmayer is the mayer of Torteltown</h1>
+    </header>
+
+    <main>
+      <div id="canvasContainer" class="canvasContainer">
+        <canvas id="canv"></canvas>
+      </div>
+      <p>
+        <button id="reload">Reload</button>
+        <button id="rewrite">Rewrite</button>
+      </p>
+      <table>
+        <tr>
+          <td>Commands</td>
+          <td><textarea id="commands" rows="5" cols="50">F = move(10)
++ = rotate(-90)
+- = rotate(90)</textarea></td>
+          <td rowspan="4">
+            <p id="result" class="result"></p>
+          </td>
+        </tr>
+        <tr>
+          <td>Rules</td>
+          <td>
+            <textarea id="rules" rows="5" cols="50">A -&gt; - B F + A F A + F B -
+B -&gt; + A F - B F B - F A +</textarea>
+          </td>
+        </tr>
+        <tr>
+          <td>Axiom</td>
+          <td><textarea id="axiom" rows="1" cols="50">A</textarea></td>
+        </tr>
+        <tr>
+          <td>Tortels</td>
+          <td><textarea id="tortels" rows="3" cols="50">[tortel(pos(10, 10), 90, "#EE0000"), tortel(pos(310, 10), 90, "#00EE00")]</textarea></td>
+        </tr>
+      </table>
+    </main>
+
+    <script>
+const rewrite = rules => lst => {
+  const res = [];
+  for (var i = 0; i < lst.length; i++) {
+    const x = lst[i];
+    if (x in rules) {
+      const y = rules[x];
+      for (var j = 0; j < y.length; j++) {
+        res.push(y[j]);
+      }
+    } else {
+      res.push(x);
+    }
+  }
+  return res; 
+}
+
+function pos(x, y) {
+  return {
+    x: x,
+    y: y
+  };
+}
+
+function line(from, to) {
+  return {
+    from: from,
+    to: to
+  };
+}
+
+function tortel(position, direction, colour) {
+  return {
+    position: position,
+    direction: direction,
+    colour: colour
+  };
+}
+
+function dir(x) {
+  var res = x;
+  while (res < 0) {
+    res = res + 360; 
+  }
+  while (res > 360) {
+    res = res - 360; 
+  }
+  return res;
+}
+
+const moveTo = to => t => {
+  return {
+    lines: [line(t.position, to)],
+    tortel: tortel(to, t.direction, t.colour)
+  };
+}
+
+const rotateTo = d => t => {
+  return {
+    lines: [],
+    tortel: tortel(t.position, d, t.colour)
+  };
+}
+
+const rotate = d => t => {
+  const newdir = dir(t.direction + d);
+  return rotateTo(newdir)(t);
+}
+
+const move = distance => t => {
+  const oldpos = t.position;
+  const r = t.direction * (Math.PI / 180);
+  const newx = oldpos.x + (Math.sin(r) * distance);
+  const newy = oldpos.y - (Math.cos(r) * distance);
+  const newpos = pos(newx, newy);
+  return moveTo(newpos)(t);
+}
+
+const makeMoves = ms => t => {
+  var res = [];
+  var ct = t;
+  for (var i = 0; i < ms.length; i++) {
+    const moved = ms[i](ct);
+    ct = moved.tortel;
+    const ls = moved.lines;
+    for (var j = 0; j < ls.length; j++) {
+      res.push(ls[j]);
+    }
+  }
+  return {
+    tortel: ct,
+    lines: res
+  };
+}
+
+const drawLine = c => l => {
+  c.moveTo(l.from.x, l.from.y);
+  c.lineTo(l.to.x, l.to.y);
+}
+
+const can = document.getElementById("canv");
+const ctx = can.getContext("2d");
+const commandsArea = document.getElementById("commands");
+const rulesArea = document.getElementById("rules");
+const axiomArea = document.getElementById("axiom");
+const tortelsArea = document.getElementById("tortels");
+const reloadButton = document.getElementById("reload");
+reloadButton.onclick = reloadStuff;
+const rewriteButton = document.getElementById("rewrite");
+rewriteButton.onclick = rewriteStuff;
+const resultPar = document.getElementById("result");
+const canvasContainer = document.getElementById("canvasContainer");
+
+
+var rules;
+var axiom;
+var result;
+var commands;
+var tortels;
+
+function splitString(str) {
+  const strs = str.split(/[ \t\r\n]+/);
+  return strs.map(x => x.trim()).filter(x => x.length > 0);
+}
+
+function parseCommands(str) {
+  const res = [];
+  const lines = str.split(/[\r\n]+/);
+  for (var i = 0; i < lines.length; i++) {
+    const x = lines[i].split("=");
+    if (x.length !== 2) {
+      console.log("nope", x);
+    } else {
+      const name = x[0].trim();
+      if (name.length === 0) {
+        console.log("nope", x);
+      } else {
+        res[name] = eval(x[1]);
+      }
+    }
+  }
+  return res;
+}
+
+function parseRules(str) {
+  const res = [];
+  const lines = str.split(/[\r\n]+/);
+  for (var i = 0; i < lines.length; i++) {
+    const x = lines[i].split("->");
+    if (x.length !== 2) {
+      console.log("nope", x);
+    } else {
+      const name = x[0].trim();
+      if (name.length === 0) {
+        console.log("nope", x);
+      } else {
+        res[name] = splitString(x[1]);
+      } 
+    }
+  }
+  return res;
+}
+
+function reloadStuff(e) {
+  commands = parseCommands(commandsArea.value);
+  rules = parseRules(rulesArea.value);
+  axiom = splitString(axiomArea.value);
+  tortels = eval(tortelsArea.value);
+  result = axiom;
+  updateGraphics();
+}
+
+function rewriteStuff() {
+  result = rewrite(rules)(result);
+  updateGraphics();
+}
+
+
+function updateGraphics() {
+  resultPar.innerText = result.join(" ");
+
+  can.width = canvasContainer.offsetWidth - 5;
+  can.height = canvasContainer.offsetHeight - 10;
+  ctx.clearRect(0, 0, can.width, can.height); 
+  const res = [];
+  for (var i = 0; i < result.length; i++) {
+    const x = result[i];
+    if (x in commands) {
+      res.push(commands[x]);
+    }
+  }
+  for (var i = 0; i < tortels.length; i++) {
+    const t = tortels[i];
+    ctx.strokeStyle = t.colour;
+    ctx.beginPath();
+    makeMoves(res)(t).lines.forEach(drawLine(ctx));
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+}
+
+reloadStuff();
+    </script>
+
+  </body>
+</html>
+

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Life</title>
+    <meta name="description" content="Mlep">
+    <meta charset="utf-8">
+    <style>
+@media all {html {font-size: 20px;}}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: sans-serif;
+  margin: 2rem;
+}
+
+h1 {
+  font-weight: bold;
+  font-size: 1.5rem;
+  color: pink;
+}
+
+p {
+  max-width: 40rem;
+}
+
+.canvas {
+  border: 0.1rem solid grey;
+}
+
+
+
+.button {
+  float: left;
+}
+
+table {
+  clear: both;
+  float: left;
+}
+
+td {
+  vertical-align: top;
+}
+
+.dead {
+  color: lightgrey;
+}
+
+.alive {
+  color: black;
+}
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Liff</h1>
+    </header>
+
+    <main>
+      <button class="button" id="stepPrevious">Previous</button>
+      <button class="button" id="stepNext">Next</button>
+      <table>
+      <tr>
+        <td><canvas class="canvas" id="big"></canvas></td>
+        <td id="result" rowspan="2"></td>
+      </tr>
+      <tr>
+        <td><canvas class="canvas" id="smol"></canvas></td>
+      </tr>
+      </table>
+      
+      
+    </main>
+
+    <script src="gif/gif.js"></script>
+    <script>
+/* globals GIF */
+const vec = (x, y) => ({x: x, y: y});
+
+const gameSize = vec(40, 40);
+
+const allCells = [...Array(gameSize.y).keys()].flatMap(y => [...Array(gameSize.x).keys()].map(x => vec(x, y)));
+
+const resizeCanvas = (canvas, squareSize, gameSize) => {
+  canvas.width = squareSize.x * gameSize.x;
+  canvas.height = squareSize.y * gameSize.y;
+};
+
+const setupDisplay = (canvasId, squareSize) => {
+  const canvas = document.getElementById(canvasId);
+  resizeCanvas(canvas, squareSize, gameSize);
+  const context = canvas.getContext("2d");
+  return { canvas: canvas, context: context, squareSize: squareSize };
+}
+
+const big = setupDisplay("big", vec(16, 16));
+const smol = setupDisplay("smol", vec(5, 5));
+const result = document.getElementById("result");
+
+const clear = x => {
+  const oldFill = x.context.fillStyle;
+  x.context.fillStyle = "#FFFFFF";
+  x.context.clearRect(0, 0, x.canvas.width, x.canvas.height);
+  x.context.fillRect(0, 0, x.canvas.width, x.canvas.height);
+  x.context.fillStyle = oldFill;
+}
+
+const drawSquare = x => position => x.context.fillRect(position.x * x.squareSize.x, position.y * x.squareSize.y, x.squareSize.x, x.squareSize.y);
+
+const vecString = p => "(" + p.x + ", " + p.y + ")";
+
+const inBounds = position => position.x >= 0 && position.x < gameSize.x && position.y >= 0 && position.y < gameSize.y;
+
+const neighbours = position => {
+  const x = position.x;
+  const y = position.y;
+  const positions = [
+    vec(x - 1, y - 1), vec(x, y - 1), vec(x + 1, y - 1),
+    vec(x - 1, y), vec(x + 1, y),
+    vec(x - 1, y + 1), vec(x, y + 1), vec(x + 1, y + 1)
+    ];
+  return positions.filter(inBounds);
+}
+
+const isAlive = cells => {
+  const living  = new Set(cells.map(vecString));
+  return position => living.has(vecString(position));
+};
+
+const shouldLive = alive => {
+  return position => {
+    const n = neighbours(position).filter(alive).length;
+    return (alive(position) && n === 2) || n === 3;
+  };
+}
+
+const step = alive => isAlive(allCells.filter(shouldLive(alive))); 
+
+const parse = s => {
+  const lines = s.split(/\r\n|\r|\n/);
+  const cells = allCells.filter(p => {
+    if (p.y >= lines.length) {
+      return false;
+    }
+    const line = lines[p.y];
+    if (p.x >= line.length) {
+      return false;
+    }
+    return line.charAt(p.x) === "*";
+  });
+  return isAlive(cells);
+};
+
+const drawLife = (x, alive) => {
+  const draw = drawSquare(x);
+  clear(x);
+  allCells.filter(alive).forEach(draw);
+}
+
+const setHtml = (element, children) => {
+  while (element.firstChild) element.removeChild(element.firstChild);
+  children.forEach(c => element.appendChild(c));
+}
+
+const displayLives = alive => {
+  previousButton.disabled = history.length === 0;
+  big.context.fillStyle = "#000000";
+  drawLife(big, alive);
+  
+  smol.context.fillStyle = "#000000";
+  drawLife(smol, alive);
+  
+  if (selected !== false) {
+    big.context.fillStyle = "#FF000066";
+    drawSquare(big)(selected);
+    smol.context.fillStyle = "#FF000066";
+    drawSquare(smol)(selected);
+  }
+}
+
+const queenbee =
+`
+
+
+
+                  *
+                * *
+               * *
+         **   *  *           **
+         **    * *           **
+                * *
+                  *
+
+
+
+
+
+                     *
+                     * *
+         **           * *    **
+         **           *  *   **
+                      * *
+                     * *
+                     *
+
+
+
+
+
+                  *
+                * *
+               * *
+         **   *  *           **
+         **    * *           **
+                * *
+                  *
+
+
+`;
+
+const octa = 
+`
+    **
+   *  *
+  *    *
+ *      *
+ *      *
+  *    *
+   *  *
+    **
+`;
+
+const fuma = 
+`
+    **
+  *    *
+  *    *
+  *    *
+   *  *
+ * *  * *
+ **    **
+`;
+
+const penta = 
+`
+
+
+
+
+
+
+
+       *    *
+     ** **** **
+       *    *
+`;
+
+const blink = 
+`
+
+   *
+   *
+   *
+ `;
+
+var currentState = parse(queenbee);
+
+var selected = false;
+
+const updateSelected = newSelected => {
+  const oldSelected = selected;
+  selected = newSelected;
+  if (newSelected === false) {
+    displayLives(currentState);
+    return;
+  }
+  if (oldSelected === false) {
+    displayLives(currentState);
+    return;
+  }
+  if ((oldSelected.x !== newSelected.x) || (oldSelected.y !== newSelected.y)) {
+    displayLives(currentState);
+    return;
+  }  
+}
+
+const updateMousePosition = o => evt => {
+  const rect = o.canvas.getBoundingClientRect();
+  const x = ~~((evt.clientX - rect.left) / o.squareSize.x);
+  const y = ~~((evt.clientY - rect.top) / o.squareSize.y);
+  updateSelected(vec(x, y));
+}
+
+const clearSelection = () => { updateSelected(false); };
+
+big.canvas.onmouseleave = clearSelection;
+big.canvas.onmousemove = updateMousePosition(big);
+big.canvas.onmouseup = e => console.log(selected);
+
+const history = [];
+
+const stepNext = () => {
+  history.push(currentState);
+  while (history.length > 100) {
+    history.shift();
+  }
+  currentState = step(currentState);
+  displayLives(currentState);
+}
+
+const stepPrevious = () => {
+  currentState = history.pop();
+  displayLives(currentState);
+}
+const previousButton = document.getElementById("stepPrevious");
+
+displayLives(currentState);
+
+previousButton.onclick = stepPrevious;
+document.getElementById("stepNext").onclick = stepNext;
+
+const blobToDataURL = (blob, callback) => {
+    var a = new FileReader();
+    a.onload = function(e) {callback(e.target.result);}
+    a.readAsDataURL(blob);
+}
+
+const gifHtml = (blob) => {
+  const res = [];
+  const img = document.createElement("img");
+  img.alt = "Mlep";
+  img.src = URL.createObjectURL(blob);
+  res.push(img);
+  return res;
+}
+
+const makeGif = (frames, delay = 500) => { 
+  const gif = new GIF({
+    workers: 2,
+    quality: 10
+  });
+
+  for (var i = 0; i < frames; i++) {
+    gif.addFrame(smol.canvas, {copy: true, delay: delay });
+    stepNext();
+  }
+  gif.on('finished', function(blob) {
+    setHtml(result, gifHtml(blob));
+  });
+  gif.render();
+}
+    </script>
+
+  </body>
+</html>
+
