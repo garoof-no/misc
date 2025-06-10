@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>beep boop</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="./cm/codemirror.css" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./cm/codemirror.js" defer></script>
+    <script src="./lambs/match.js" defer></script>
+    <script src="./lambs/maybe.js" defer></script>
+    <script src="./lambs/exp.js" defer></script>
+    <script src="./lambs/parse.js" defer></script>
+    <script src="./lambs/unparse.js" defer></script>
+    <script src="./lambs/path.js" defer></script>
+    <script src="./lambs/redex.js" defer></script>
+    <script src="./lambs/eval.js" defer></script>
+    <script src="./lambs/repl.js" defer></script>
+    <script src="./lambs/beep-boop.js" defer></script>
+    <script src="./lambs/debruijn.js" defer></script>
+
+    <script src="./fish/vector.js" defer></script>
+    <script src="./fish/point.js" defer></script>
+    <script src="./fish/box.js" defer></script>
+    <script src="./fish/hue.js" defer></script>
+    <script src="./fish/lens.js" defer></script>
+    <script src="./fish/svg.js" defer></script>
+    <script src="./fish/shape.js" defer></script>
+    <script src="./fish/letter.js" defer></script>
+    <script src="./fish/george.js" defer></script>
+    <script src="./fish/fish.js" defer></script>
+    <script src="./fish/picture.js" defer></script>
+    <script src="./fish/magic.js" defer></script>
+    <script src="./fish/mirror.js" defer></script>
+
+    <script src="./rects.js" defer></script>
+    <script src="./tree.js" defer></script>
+    <script src="./fishlamb.js" defer></script>
+    <script src="./sounds.js" defer></script>
+    <script src="./editor.js" defer></script>
+    <script src="./booper.js" defer></script>
+    <script src="./main.js" defer></script>
+
+    <script src="./slides.js" defer></script>
+  </head>
+  <body>
+    <div id="time" class="time"></div>
+    <div id="slides" class="slides">
+      <div class="slide">
+        <h1>lambda calculus beep boop</h1>
+        <p>
+          recursion:
+          <a href="https://misc.garoof.no/beep-boop/bap.html"
+            >https://misc.garoof.no/beep-boop/bap.html</a
+          >
+        </p>
+        <p>
+          we: <a href="https://einarwh.no">Einar</a>,
+          <a href="https://garoof.no">Jonas</a>
+        </p>
+      </div>
+      
+      <div class="slide">
+        <h1>
+          soundtest
+        </h1>
+        <div name="eval" class="code" contenteditable="true">
+Sounds.playStuff([{ beops: "beep beep boop boop pling bap".split(" ")}])
+        </div>
+      </div>
+
+      <div class="slide">
+        <h1>
+          commands for slides
+        </h1>
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                <button
+                  title="Exit fullscreen"
+                  name="slide-command"
+                  command="escape"
+                  class="command-square"
+                >
+                  ␛
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><div class="command-square"></div></td>
+            </tr>
+            <tr>
+              <td><div class="command-square"></div></td>
+              <td><div class="command-square"></div></td>
+              <td>
+                <button
+                  title="Previous slide"
+                  name="slide-command"
+                  command="q"
+                  class="command-square"
+                >
+                  Q
+                </button>
+              </td>
+              <td>
+                <button
+                  title="Enter fullscreen"
+                  name="slide-command"
+                  command="w"
+                  class="command-square"
+                >
+                  W
+                </button>
+              </td>
+              <td>
+                <button name="slide-command" command="e" class="command-square">
+                  E
+                </button>
+              </td>
+              <td><div title="Next slide" class="command-square"></div></td>
+              <td>
+                <button
+                  title="Toggle timething"
+                  name="slide-command"
+                  command="t"
+                  class="command-square"
+                >
+                  T
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="slide">
+        <table>
+          <tbody>
+            <tr>
+              <td>Exp u ::=</td>
+              <td>x</td>
+              <td>variable</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>λx.u</td>
+              <td>abstraction</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>u1 u2</td>
+              <td>application</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide">
+        this is mostly about syntax really
+      </div>
+      <div class="slide">
+        also it's like stupid I guess
+      </div>
+      <div class="slide">
+        <h1>
+          semantics though
+        </h1>
+        <p>replace references to parameter with argument</p>
+        <p>
+          (λa.λb.λc.c a b) foo bar quux
+          <br />
+          (λb.λc.c foo b) bar quux
+          <br />
+          (λc.c foo bar) quux
+          <br />
+          quux foo bar
+        </p>
+      </div>
+      <div class="wideslide">
+        <p>
+          this slide is wide :)
+        </p>
+        <div class="row">
+          <div name="tree">(λa.λb.λc.c a b) foo bar quux</div>
+          <div name="tree">(λb.λc.c foo b) bar quux</div>
+          <div name="tree">(λc.c foo bar) quux</div>
+          <div name="tree">quux foo bar</div>
+        </div>
+      </div>
+      <div class="slide">
+        <h1>some lambdas</h1>
+        <p>
+          0 is λf.λx.x<br />
+          1 is λf.λx.f x<br />
+          2 is λf.λx.f (f x)<br />
+          3 is λf.λx.f (f (f x))<br />
+          5 is λf.λx.f (f (f (f (f x))))<br />
+          and so on
+        </p>
+      </div>
+
+      <div class="slide">
+        <h1>some lambdas</h1>
+        <p>
+          + is λa.λb.λf.λx.a f (b f x)<br />
+          (f applied a times to f applied b times to x)
+        </p>
+        <p>
+          * is λa.λb.λf.λx.a (b f) x<br />
+          (f applied b times a times to x)
+        </p>
+      </div>
+
+      <div class="slide">
+        <h1>can try</h1>
+        <div name="lambs" class="editor twothirds">2 ≜ λf.λx.f (f x)<br />
+3 ≜ λf.λx.f (f (f x))<br />
++ ≜ λa.λb.λf.λx.a f (b f x)<br />
+* ≜ λa.λb.λf.λx.a (b f) x<br />
+<br />
++ 2 2<br />
++ 2 3<br /></div>
+      </div>
+      <div class="slide">
+        <ul>
+          <li>is traditional</li>
+          <li>possibly shoutability concerns</li>
+          <li>variables can be named almost anything</li>
+          <li>is the untyped lambda calculus sound?</li>
+          <li>has greek letters in it (hci?)</li>
+          <li>parentheses)))</li>
+          <li>variable capture thing</li>
+        </ul>
+      </div>
+      <div class="slide">
+        <h1>variable capture thing</h1>
+        <p>λy.(λx.λy.x) y</p>
+      </div>
+      <div class="slide">
+        <h1>variable capture thing</h1>
+        <p>λy.(λx.λy.x) y</p>
+        <p>λy.λy.y</p>
+        <p>oh no</p>
+      </div>
+      <div class="slide">
+        <h1>variable capture thing</h1>
+        <p>λy.(λx.λy.x) y</p>
+        <p>rename inner y before reducing</p>
+        <div name="lambs" class="editor third">λy.(λx.λy.x) y</div>
+      </div>
+      <div class="slide">
+        <h1>de bruijn index</h1>
+      </div>
+      <div class="slide">
+        <table>
+          <tbody>
+            <tr>
+              <td>Exp u ::=</td>
+              <td>n</td>
+              <td>variable</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>λu</td>
+              <td>abstraction</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>u1 u2</td>
+              <td>application</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide">
+        <p>λz.(λy.y (λx. x)) (λx.z x)</p>
+        <img
+          src="./debruijn.svg"
+        />
+      </div>
+      <div class="slide">
+        <h1>some lambdas</h1>
+        <p>
+          0 is λλ1<br />
+          1 is λλ2 1<br />
+          2 is λλ2 (2 1)<br />
+          3 is λλ2 (2 (2 1))<br />
+          5 is λλ2 (2 (2 (2 (2 1))))<br />
+          and so on
+        </p>
+      </div>
+      <div class="slide">
+        <h1>some lambdas</h1>
+        <p>+ is λλλλ4 2 (3 2 1)<br />(um)</p>
+        <p>* is λλλλ4 (3 2) 1<br />(uh)</p>
+      </div>
+      <div class="slide">
+        <h1>some lambdas</h1>
+        <p>
+          + is λa.λb.λf.λx.a f (b f x)<br />
+          (f applied a times to f applied b times to x)
+        </p>
+        <p>
+          * is λa.λb.λf.λx.a (b f) x<br />
+          (f applied b times a times to x)
+        </p>
+      </div>
+      <div class="slide">
+        <div class="row">
+          <div name="tree">λa.λb.λf.λx.a f (b f x)</div>
+          <div name="tree" type="bru">λa.λb.λf.λx.a f (b f x)</div>
+        </div>
+      </div>
+      <div class="slide">
+        <h1>2 + 3</h1>
+        <p>
+          (λλλλ4 2 (3 2 1)) (λλ2 (2 1)) (λλ2 (2 (2 1)))<br />
+          (λλλ(λλ2 (2 1)) 2 (3 2 1)) (λλ2 (2 (2 1)))<br />
+          λλ(λλ2 (2 1)) 2 ((λλ2 (2 (2 1))) 2 1)<br />
+          λλ(λ3 (3 1)) ((λλ2 (2 (2 1))) 2 1)<br />
+          λλ2 (2 ((λλ2 (2 (2 1))) 2 1))<br />
+          λλ2 (2 ((λ3 (3 (3 1))) 1))<br />
+          λλ2 (2 (2 (2 (2 1))))
+        </p>
+      </div>
+      <div class="slide">
+        <h1>2 * 3</h1>
+        <p>
+          (λλλλ4 (3 2) 1) (λλ2 (2 1)) (λλ2 (2 (2 1)))<br />
+          (λλλ(λλ2 (2 1)) (3 2) 1) (λλ2 (2 (2 1)))<br />
+          λλ(λλ2 (2 1)) ((λλ2 (2 (2 1))) 2) 1<br />
+          λλ(λ(λλ2 (2 (2 1))) 3 ((λλ2 (2 (2 1))) 3 1)) 1<br />
+          λλ(λλ2 (2 (2 1))) 2 ((λλ2 (2 (2 1))) 2 1)<br />
+          λλ(λ3 (3 (3 1))) ((λλ2 (2 (2 1))) 2 1)<br />
+          λλ2 (2 (2 ((λλ2 (2 (2 1))) 2 1)))<br />
+          λλ2 (2 (2 ((λ3 (3 (3 1))) 1)))<br />
+          λλ2 (2 (2 (2 (2 (2 1)))))
+        </p>
+      </div>
+      <div class="slide">
+        <h1>variable capture thing</h1>
+        <p>λy.(λx.λy.x) y</p>
+        <p>λ(λλ2) 1</p>
+      </div>
+      <div class="slide">
+        <h1>variable capture thing</h1>
+        <p>λ(λλ2) 1</p>
+        <p>λλ2</p>
+      </div>
+      <div class="slide">
+        <div class="row">
+          <div name="tree">λy.(λx.λy.x) y</div>
+          <div name="tree">λy2.(λx.λy.x) y2</div>
+          <div name="tree">λy2.λy.y2</div>
+        </div>
+      </div>
+      <div class="slide">
+        <div class="row">
+          <div name="tree" type="bru">λy2.(λx.λy.x) y2</div>
+          <div name="tree" type="bru">λy2.λy.y2</div>
+        </div>
+      </div>
+      <div class="slide">
+        <div class="row">
+          <div name="tree" type="bru">λy2.(λx.λy.x (λy.x)) y2</div>
+          <div name="tree" type="bru">λy2.λy.y2 (λy.y2)</div>
+        </div>
+      </div>
+      <div class="slide">
+        <h1>anyway</h1>
+        <ul>
+          <li>arithmetic instead of variable capture</li>
+          <li>subtract 1 from free variables in the function</li>
+          <li>
+            number of parameter-variable in function increases with depth in
+            syntax tree
+          </li>
+          <li>add depth to free variables in argument when replacing</li>
+        </ul>
+      </div>
+      <div class="slide">
+        <ul>
+          <li>fewer possible variable names</li>
+          <li>still uses greek letters</li>
+          <li>also still parentheses</li>
+          <li>maths</li>
+        </ul>
+      </div>
+      <div class="slide">
+        <h1>beep boop</h1>
+      </div>
+      <div class="slide">
+        <table>
+          <tbody>
+            <tr>
+              <td>Exp u ::=</td>
+              <td>boop b</td>
+              <td>variable</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>beep u</td>
+              <td>abstraction</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>pling u1 u2</td>
+              <td>application</td>
+            </tr>
+          </tbody>
+        </table>
+        <br />
+        <table>
+          <tbody>
+            <tr>
+              <td>Boops b ::=</td>
+              <td>bap</td>
+              <td>bap</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>boop b</td>
+              <td>boop</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide">
+        <h1>
+          so the identity function is beep boop bap
+        </h1>
+        <p>
+          nice
+        </p>
+      </div>
+      <div class="slide">
+        <h1>
+          so the identity function is beep boop bap
+        </h1>
+        <div class="row">
+          <div name="tree">λx.x</div>
+          <div name="tree" type="beops">λx.x</div>
+        </div>
+      </div>
+      <div class="slide">
+        <h1>
+          some beep boops
+        </h1>
+        <p>
+          0 is beep beep boop bap<br>
+          1 is beep beep pling boop boop bap boop bap<br>
+          2 is beep beep pling boop boop bap pling boop boop bap boop bap<br>
+          3 is beep beep pling boop boop bap pling boop boop bap pling boop boop bap boop bap<br>
+          5 is beep beep pling boop boop bap pling boop boop bap pling boop boop bap pling boop boop bap pling boop boop bap boop bap<br>
+          and so on
+        </p>
+      </div>
+      <div class="slide">
+        <h1>
+          some beep boops
+        </h1>
+        <p>
+          + is beep beep beep beep pling pling boop boop boop boop bap boop boop bap pling pling boop boop boop bap boop boop bap boop bap<br>
+          * is beep beep beep beep pling pling boop boop boop boop bap pling boop boop boop bap boop boop bap boop bap
+        </p>
+      </div>
+      <div class="slide">
+        <h1>
+          2 + 3
+        </h1>
+        <p>
+          pling pling beep beep beep beep pling pling boop boop boop boop bap boop boop bap pling pling boop boop boop bap boop boop bap boop bap beep beep pling boop boop bap pling boop boop bap boop bap beep beep pling boop boop bap pling boop boop bap pling boop boop bap boop bap
+        </p>
+      </div>
+      <div class="slide">
+        <p>
+          we can try
+        </p>
+        <p>
+          for keyboard: a = beep, s = boop d = bap, f = pling, backspace = undo, space = "next"
+        </p>
+        <div name="beep-boop" beops></div>
+      </div>
+     <div class="slide">
+       <p>
+         with tree
+       </p>
+       <div name="beep-boop" beops-tree></div>
+      </div>
+      <div class="slide">
+        <p>
+          lambdatree!
+        </p>
+        <div name="beep-boop" beops lambs-tree></div>
+      </div>
+      <div class="slide">
+        <p>
+          more lambdaer
+        </p>
+        <div name="beep-boop" beops lambs lambs-tree></div>
+      </div>
+      <div class="slide">
+        <h1>
+          also actual sounds
+        </h1>
+        <div name="beep-boop" beops lambs sound></div>
+      </div>
+      <div class="slide">
+        <ul>
+          <li>no parentheses</li>  
+          <li>a small set of not very difficult words</li>
+          <li>solves hci issues by being intuitive for both humans and computers</li>
+        </ul>
+      </div>
+      <div class="slide">
+        <h1>cannot syntax error</h1>
+        <div name="lambs" class="editor third">λf.λx.f (f x<br>λf.λx f (f x)<br>x.x</div>
+        <div name="beep-boop" beops lambs sound></div>
+      </div>
+      <div class="slide">
+        <p>
+          so uh what else? 
+        </p>
+      </div>
+      <div class="slide">
+        <p>
+          I mean, there's fish?
+        </p>
+        <p>
+          Einar always has some fish
+        </p>
+        <div name="eval" class="code" contenteditable="true">Svg.create(
+    600,
+    600,
+    Mirror.mirrorShapes(
+        600,
+        Picture.squareLimitColor(
+            4,
+            Magic.createPicture(Fish.fancy()))
+            (Lens.create(
+                Box.create(
+                    Vector.create(100, 100),
+                    Vector.create(400, 0),
+                    Vector.create(0, 400)),
+                Hue.create("black")))).map(r =&gt; r.shape.toSvgElement(r.style)))
+        </div>
+      </div>
+      <div class="slide">
+        <div name="beep-boop" beops lambs fish sound></div>
+      </div>
+      <div class="slide">
+        <h1>
+          some other picture combinator thing          
+        </h1>
+        <p>
+          maybe more legible
+        </p>
+        <div name="beep-boop" beops lambs rects sound></div>
+      </div>
+      <div class="slide">
+        <h1>
+          can make it sound different
+        </h1>
+        <div name="eval" class="code" contenteditable="true">
+const supersaw = (freq, vol, sawNumber, detune) =&gt; {
+    let g = Sounds.audioContext().createGain();
+    g.gain.setValueAtTime(0, Sounds.audioContext().currentTime);
+
+    for (let i = 0; i &lt; sawNumber; i++) {
+        let saw = Sounds.audioContext().createOscillator();
+        saw.type = 'sawtooth';
+        saw.frequency.setValueAtTime(freq, Sounds.audioContext().currentTime);
+        saw.detune.value = -detune + i * 2 * (detune / (sawNumber - 1));
+        saw.start();
+        saw.connect(g);
+    }
+
+    let dur = 0;
+    for (let i = 0; i &lt; vol.length; i++) {
+        dur = dur + vol[i].time;
+    }
+    dur = dur * 0.5;
+
+    g.connect(Sounds.audioContext().destination);
+
+    return Sounds.note(dur, [{ dial: g.gain, vts: vol }]);
+}
+
+const sawVol = [
+    { val: 0.13, time: 0.1 },
+    { val: 0.1, time: 0.2 },
+    { val: 0.1, time: 0.5 },
+    { val: 0, time: 0.3 }];
+
+const saw = (freq) =&gt; supersaw(freq, sawVol, 7, 10);
+
+Sounds.setNotes(new Map(
+    [
+        ["beep", saw(440)],
+        ["boop", saw(493.88)],
+        ["bap", saw(523.25)],
+        ["pling", saw(587.33)],
+        ["undo", saw(800)],
+        ["next", saw(250)]
+    ]));
+        </div>
+        
+        <div name="beep-boop" beops lambs sound rects></div>
+        <p>(supersaw stolen from Stian. <a href="https://github.com/mollerse/audible-code-presentation">code</a>.)</p>
+      </div>
+      <div class="slide">
+        <h1>
+          forever
+        </h1>
+        <p>
+          omega!
+        </p>
+        <div name="beep-boop" beops lambs sound rects>
+          
+        </div>
+      </div>
+      <div class="slide">
+        <div name="eval" class="code" contenteditable="true">
+const f = (x) =&gt; [{ val: x * 1.2, time: 0.7 }, { val: x, time: 0.3 }];
+
+const vol =
+    [
+        { val: 0.13, time: 0.1 },
+        { val: 0.1, time: 0.2 },
+        { val: 0.1, time: 0.5 },
+        { val: 0, time: 0.3 }
+    ];
+
+const newNotes = new Map([
+    ["beep", Sounds.makeNote(f(400), vol)],
+    ["boop", Sounds.makeNote(f(460), vol)],
+    ["bap", Sounds.makeNote(f(515), vol)],
+    ["pling", Sounds.makeNote(f(550), vol)],
+    ["undo", Sounds.makeNote(f(800), vol)],
+    ["next", Sounds.makeNote(f(250), vol)]
+]);
+Sounds.setNotes(newNotes);
+        </div>
+      </div>
+      <div class="slide">
+        <h1>
+          conclusion
+        </h1>
+        <ul>
+          <li>you totally can use numbers instead of variable names</li>
+          <li>if you use a symbol for function application you can drop the parentheses
+          <ul>
+            
+
+          <li>it's like reverse reverse polish notation
+          <ul><li>I mean polish notation
+          <ul>
+            <li>do you just call it notation here?</li>
+          </ul>
+            </li></ul></li></ul></li>
+          <li>and I mean why would/wouldn't you do none/some/all of those things?</li>
+          <li>for some things, numbers and that is a good starting point</li>
+        </ul>
+      </div>
+      <div class="slide">
+        <h1>
+          code
+        </h1>
+        <p>
+          <a href="https://github.com/garoof-no/misc">https://github.com/garoof-no/misc</a>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
