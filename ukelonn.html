@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Atma:wght@300;400;500;600;700&family=Chilanka&display=swap" rel="stylesheet">
+    <title>Ukelønn</title>
+    <style>
+      body {
+        font-family: "Chilanka", cursive;
+        font-weight: 400;
+        font-style: normal;
+        display: flex;
+        flex-direction: row;
+        column-gap: 2rem;
+      }
+      body > div {
+        display: flex;
+        flex-direction: column;
+        row-gap: 3rem;
+      }
+      table {
+        border-spacing: 10px 0;
+      }
+      th, td {
+        padding: 2px;
+      }
+      .dagsoppgaver tr {
+        height: 2rem;
+      }
+      .ukesoppgaver tr {
+        height: 2.3rem;
+      }
+      .dagsoppgaver th {
+        border-bottom: 2pt solid #87c55f;
+      }
+      h1 {
+        text-align: center;
+        font-family: "Atma", system-ui;
+        font-weight: 500;
+        font-style: normal;
+      }
+      .oppgave {
+        min-width: 15rem;
+        text-align: left;
+        font-size: 1.2rem;
+      }
+      .tall {
+        min-width: 4rem;
+        text-align: center;
+        font-size: 1.2rem;
+      }
+      .total {
+        text-align: right;
+        font-weight: bold;
+      }
+      .tall, .oppgave {
+        border-bottom: 1pt solid black;
+      }
+      .rotert {
+        writing-mode: tb-rl;
+        transform: rotate(-180deg);
+        font-size: 1.3rem;
+      }
+    </style>
+    <script>
+      const farger = ["#66c5cc", "#f6cf71", "#f89c74", "#dcb0f2", "#87c55f", "#9eb9f3", "#fe88b1"];
+      const dager = ["MANDAG","TIRSDAG", "ONSDAG", "TORSDAG", "FREDAG", "LØRDAG", "SØNDAG"];
+      const sjekkboks = (farge, symbol, størelse) => 
+        `<td><div style="height:1.8rem; overflow:hidden; font-size:${størelse}; color:${farge};">${symbol}</div></td>`;
+      const dagsoppgaver = (symbol, størelse) => {
+        const dager = farger.map(farge => sjekkboks(farge, symbol, størelse)).join("");
+        return `<tr><td class="oppgave" contenteditable="true"></td><td class="tall" contenteditable="true"></td>${dager}<td class="tall"></td></tr>`;
+      };
+      const ukesoppgave = (dag, farge, symbol, størelse) => {
+        const først = dag === "MANDAG" ? `<th rowspan="8" class="rotert">UKESOPPGAVER</th>`  : "";
+        return `<tr>${først}<th style="min-width:2rem;border-radius:3px;background-color:${farge};">${dag}</th><td class="oppgave" contenteditable="true"></td>${sjekkboks(farge, symbol, størelse)}<td class="tall"></td></tr>`;
+      };
+      const ukeHtml = (rader, symbol, størelse) => 
+`
+    <div>
+      <h1 contenteditable="true">OVERSKRIFT</h1>
+      <table class="dagsoppgaver">
+        <thead>
+          <tr><th>OPPGAVE</th><th>BELØP</th><th>M</th><th>T</th><th>O</th><th>T</th><th>F</th><th>L</th><th>S</th><th>SUM</th></tr>
+        </thead>
+        <tbody>
+          ${new Array(rader).fill(dagsoppgaver(symbol, størelse)).join("")}
+        </tbody>
+        <tfoot>
+          <tr><td colspan="9" class="total">TOTAL:</td><td class="tall">&#10240;</td>
+        </tfoot>
+      </table>
+      <table class="ukesoppgaver">
+        <tbody>
+          ${dager.map((dag, i) => ukesoppgave(dag, farger[i], symbol, størelse)).join("")}
+        </tbody>
+        <tfoot>
+          <tr><td colspan="4" class="total">TOTAL:</td><td class="tall">&#10240;</td>
+        </tfoot>
+      </table>
+    </div>
+`;
+      const uke = (rader, symbol, størelse) => document.body.innerHTML += ukeHtml(rader, symbol, størelse);
+      window.onload = () => {
+        document.body.innerHTML = "";
+        uke(12, "❤", "1.3rem");
+        uke(12, "★", "1.6rem");
+      };
+    </script>
+  </head>
+  <body>
+    <p>Trenger JavaScript :|</p>
+  </body>
+</html>
