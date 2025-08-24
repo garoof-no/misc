@@ -27,6 +27,9 @@
       th, td {
         padding: 2px;
       }
+      td {
+        vertical-align: bottom;
+      }
       .dagsoppgaver tr {
         height: 2rem;
       }
@@ -64,12 +67,15 @@
         transform: rotate(-180deg);
         font-size: 1.3rem;
       }
+      
     </style>
     <script>
       const farger = ["#66c5cc", "#f6cf71", "#f89c74", "#dcb0f2", "#87c55f", "#9eb9f3", "#fe88b1"];
       const dager = ["MANDAG","TIRSDAG", "ONSDAG", "TORSDAG", "FREDAG", "LØRDAG", "SØNDAG"];
-      const sjekkboks = (farge, symbol, størelse) => 
-        `<td><div style="height:1.8rem; overflow:hidden; font-size:${størelse}; color:${farge};">${symbol}</div></td>`;
+      const sjekkboks = (farge, symbol, størelse) => {
+        const div = `<div style="height:1.8rem; overflow:hidden; font-size:${størelse}; color:${farge};">${symbol}</div>`;
+        return `<td>${Array(2).fill(div).join("")}</td>`;
+      };
       const dagsoppgaver = (symbol, størelse) => {
         const dager = farger.map(farge => sjekkboks(farge, symbol, størelse)).join("");
         return `<tr><td class="oppgave" contenteditable="true"></td><td class="tall" contenteditable="true"></td>${dager}<td class="tall"></td></tr>`;
@@ -93,21 +99,21 @@
           <tr><td colspan="9" class="total">TOTAL:</td><td class="tall">&#10240;</td>
         </tfoot>
       </table>
-      <table class="ukesoppgaver">
+      <!-- table class="ukesoppgaver">
         <tbody>
           ${dager.map((dag, i) => ukesoppgave(dag, farger[i], symbol, størelse)).join("")}
         </tbody>
         <tfoot>
           <tr><td colspan="4" class="total">TOTAL:</td><td class="tall">&#10240;</td>
         </tfoot>
-      </table>
+      </table -->
     </div>
 `;
       const uke = (rader, symbol, størelse) => document.body.innerHTML += ukeHtml(rader, symbol, størelse);
       window.onload = () => {
         document.body.innerHTML = "";
-        uke(12, "❤", "1.3rem");
-        uke(12, "★", "1.6rem");
+        uke(13, "❤", "1.3rem");
+        uke(13, "★", "1.6rem");
       };
     </script>
   </head>
